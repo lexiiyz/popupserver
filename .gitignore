@@ -13,4 +13,4 @@ node_modules/
 .DS_Store
 
 # Server Uploads
-public/qrcodes/
+# public/qrcodes/ (Uncommented so images are tracked for Render deployment)
