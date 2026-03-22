@@ -18,7 +18,7 @@
   {
     "page": 2,
     "title": "HALAMAN 2",
-    "audio": "",
+    "audio": "/uploads/audio/audio_bg_punknown_1774137044002.mp3",
     "popups": [
       {
         "header": "Pertanyaan Pemantik",
@@ -87,21 +87,21 @@
         "text": "1.\tTragedi\n2.\tKomedi\n3.\tOpera\n4.\tMelodrama\n5.\tTablo\n6.\tSendratari",
         "links": [],
         "qrcode": "",
-        "audio": ""
+        "audio": "/uploads/audio/audio_bg_punknown_1774137060060.mp3"
       },
       {
         "header": "Jenis Drama Berdasarkan Sarana ",
         "text": "1.\tDrama panggung\n2.\tDrama radio\n3.\tDrama televisi\n4.\tDrama film\n5.\tDrama wayang\n6.\tDrama boneka",
         "links": [],
         "qrcode": "",
-        "audio": ""
+        "audio": "/uploads/audio/audio_bg_punknown_1774137066619.mp3"
       },
       {
         "header": "Jenis Drama Berdasarkan Naskah ",
         "text": "1.\tDrama tradisional\n2.\tDrama modern",
         "links": [],
         "qrcode": "",
-        "audio": ""
+        "audio": "/uploads/audio/audio_bg_punknown_1774137075051.mp3"
       },
       {
         "header": "Youtube",
@@ -158,7 +158,7 @@
         "text": "1.\tTema\n2.\tAlur\n3.\tTokoh dan Penokohan\n4.\tDialog\n5.\tLatar\n6.\tKonflik\n7.\tAmanat",
         "links": [],
         "qrcode": "",
-        "audio": ""
+        "audio": "/uploads/audio/audio_bg_punknown_1774137095149.mp3"
       }
     ]
   },
@@ -172,7 +172,7 @@
         "text": "1.\tLatar belakang pengarang\n2.\tKeadaan sosial dan politik\n3.\tPsikologi pengarang",
         "links": [],
         "qrcode": "",
-        "audio": ""
+        "audio": "/uploads/audio/audio_bg_punknown_1774137102661.mp3"
       },
       {
         "header": "Youtube",
@@ -232,6 +232,14 @@
         ],
         "qrcode": "/uploads/qrcodes/qr_punknown_1773996384453.png",
         "audio": ""
+      },
+      {
+        "header": "Konten Bagan",
+        "image": "/assets/images/page8/1.png",
+        "text": "",
+        "links": [],
+        "qrcode": "",
+        "audio": "/uploads/audio/audio_bg_punknown_1774137142038.mp3"
       }
     ]
   },
@@ -279,7 +287,7 @@
         "text": "1.\tKalimat langsung\n2.\tKalimat bersifat narasi\n3.\tPronomina\n4.\tKata sapaan\n5.\tKosa kata percakapan\n6.\tKata seru\n7.\tKata tidak baku\n8.\tKonjungsi temporal\n9.\tKata sifat\n10.\tKata Kerja",
         "links": [],
         "qrcode": "",
-        "audio": ""
+        "audio": "/uploads/audio/audio_bg_punknown_1774137160952.mp3"
       },
       {
         "header": "Youtube",
@@ -360,7 +368,16 @@
     "page": 14,
     "title": "HALAMAN 14",
     "audio": "",
-    "popups": []
+    "popups": [
+      {
+        "header": "Konten Bagan",
+        "image": "/assets/images/page14/1.png",
+        "text": "",
+        "links": [],
+        "qrcode": "",
+        "audio": "/uploads/audio/audio_bg_punknown_1774137185357.mp3"
+      }
+    ]
   },
   {
     "page": 15,
@@ -389,6 +406,14 @@
         "links": [],
         "qrcode": "",
         "audio": ""
+      },
+      {
+        "header": "Konten Bagan",
+        "image": "/assets/images/page15/1.png",
+        "text": "",
+        "links": [],
+        "qrcode": "",
+        "audio": "/uploads/audio/audio_bg_punknown_1774137208107.mp3"
       }
     ]
   },
