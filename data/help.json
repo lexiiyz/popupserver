@@ -1,0 +1,48 @@
+{
+  "mobile": [
+    {
+      "text": "Tekan tombol <strong>\"📖 Buka Buku\"</strong> di bagian bawah layar untuk membuka halaman depan buku pop-up 3D."
+    },
+    {
+      "text": "Gunakan tombol <strong>\"← Sebelumnya\"</strong> dan <strong>\"Berikutnya →\"</strong> di baris atas untuk berpindah antar halaman materi."
+    },
+    {
+      "text": "Di setiap halaman terdapat <strong>papan informasi 3D</strong> yang bisa ditekan. Cari tulisan <strong>\"👆 Tekan untuk melihat detail\"</strong> pada papan tersebut."
+    },
+    {
+      "text": "Setelah menekan papan, akan muncul <strong>pop-up detail</strong> berisi materi lengkap, tautan video/dokumen, QR Code, atau audio pembelajaran."
+    },
+    {
+      "text": "Pada halaman tertentu terdapat tombol <strong>\"🔊 Putar Audio Halaman\"</strong> untuk mendengarkan narasi audio materi."
+    },
+    {
+      "text": "Anda dapat <strong>memutar dan memperbesar</strong> tampilan buku 3D dengan cara:<br>• <strong>Sentuh + geser</strong> dengan satu jari untuk memutar<br>• <strong>Pinch</strong> (cubit) dengan dua jari untuk zoom in/out"
+    },
+    {
+      "text": "Setelah selesai menjelajahi materi, tekan tombol <strong>\"📕 Tutup Buku\"</strong> untuk menutup buku kembali."
+    }
+  ],
+  "desktop": [
+    {
+      "text": "Tekan tombol <strong>\"📖 Buka Buku\"</strong> di bagian bawah layar untuk membuka halaman depan buku pop-up 3D."
+    },
+    {
+      "text": "Gunakan tombol <strong>\"← Sebelumnya\"</strong> dan <strong>\"Berikutnya →\"</strong> di baris atas untuk berpindah antar halaman materi."
+    },
+    {
+      "text": "Di setiap halaman terdapat <strong>papan informasi 3D</strong> yang bisa ditekan. Cari tulisan <strong>\"👆 Tekan untuk melihat detail\"</strong> pada papan tersebut."
+    },
+    {
+      "text": "Setelah menekan papan, akan muncul <strong>pop-up detail</strong> berisi materi lengkap, tautan video/dokumen, QR Code, atau audio pembelajaran."
+    },
+    {
+      "text": "Pada halaman tertentu terdapat tombol <strong>\"🔊 Putar Audio Halaman\"</strong> untuk mendengarkan narasi audio materi."
+    },
+    {
+      "text": "Anda dapat <strong>memutar dan memperbesar</strong> tampilan buku 3D dengan cara:<br>• <strong>Klik kiri + geser</strong> mouse untuk memutar<br>• <strong>Scroll wheel</strong> mouse untuk zoom in/out<br>• <strong>Klik kanan + geser</strong> untuk menggeser posisi buku"
+    },
+    {
+      "text": "Setelah selesai menjelajahi materi, tekan tombol <strong>\"📕 Tutup Buku\"</strong> untuk menutup buku kembali."
+    }
+  ]
+}

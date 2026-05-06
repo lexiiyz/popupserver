@@ -85,6 +85,32 @@ app.post('/api/upload-audio', uploadAudio.single('audio'), (req, res) => {
   res.json({ message: 'Audio uploaded', url });
 });
 
+// ─── Help Guide API ─────────────────────────────────────────────────
+const HELP_FILE = path.join(__dirname, 'data', 'help.json');
+
+// API: Get help guide steps
+app.get('/api/help', (req, res) => {
+  fs.readFile(HELP_FILE, 'utf8', (err, data) => {
+    if (err) {
+      console.error(err);
+      return res.status(500).json({ error: 'Failed to read help data' });
+    }
+    res.json(JSON.parse(data));
+  });
+});
+
+// API: Save help guide steps
+app.post('/api/help', (req, res) => {
+  const newHelp = req.body;
+  fs.writeFile(HELP_FILE, JSON.stringify(newHelp, null, 2), 'utf8', (err) => {
+    if (err) {
+      console.error(err);
+      return res.status(500).json({ error: 'Failed to save help data' });
+    }
+    res.json({ message: 'Help guide saved successfully' });
+  });
+});
+
 app.listen(PORT, () => {
   console.log(`CMS Backend running at http://localhost:${PORT}`);
 });
