@@ -1,12 +1,32 @@
+require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
+const mongoose = require('mongoose');
 const fs = require('fs');
 const path = require('path');
 const multer = require('multer');
 
+const Content = require('./models/Content');
+const Help = require('./models/Help');
+
 const app = express();
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
+const MONGODB_URI = process.env.MONGODB_URI;
 const DATA_FILE = path.join(__dirname, 'data', 'content.json');
+
+// ─── MongoDB Connection ─────────────────────────────────────────────
+if (MONGODB_URI) {
+  mongoose.connect(MONGODB_URI)
+    .then(() => console.log('✅ Connected to MongoDB Atlas'))
+    .catch(err => console.error('❌ MongoDB connection error:', err.message));
+} else {
+  console.warn('⚠️  MONGODB_URI not set. Falling back to local JSON files.');
+}
+
+// Helper: check if MongoDB is connected
+function isMongoConnected() {
+  return mongoose.connection.readyState === 1;
+}
 
 // Ensure upload directories exist
 const QR_DIR = path.join(__dirname, 'public', 'qrcodes');
@@ -48,37 +68,68 @@ app.use(express.json());
 // Serve uploaded files statically
 app.use('/uploads', express.static(path.join(__dirname, 'public')));
 
-// API: Get content
-app.get('/api/content', (req, res) => {
-  fs.readFile(DATA_FILE, 'utf8', (err, data) => {
-    if (err) {
-      console.error(err);
-      return res.status(500).json({ error: 'Failed to read data' });
+// ─── API: Get content ───────────────────────────────────────────────
+app.get('/api/content', async (req, res) => {
+  try {
+    if (isMongoConnected()) {
+      const doc = await Content.findOne({ key: 'main' });
+      if (doc) {
+        return res.json(doc.pages);
+      }
+      // If no data in MongoDB yet, return empty array
+      return res.json([]);
     }
-    res.json(JSON.parse(data));
-  });
+
+    // Fallback: read from file
+    fs.readFile(DATA_FILE, 'utf8', (err, data) => {
+      if (err) {
+        console.error(err);
+        return res.status(500).json({ error: 'Failed to read data' });
+      }
+      res.json(JSON.parse(data));
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to read data' });
+  }
 });
 
-// API: Save content
-app.post('/api/content', (req, res) => {
-  const newContent = req.body;
-  fs.writeFile(DATA_FILE, JSON.stringify(newContent, null, 2), 'utf8', (err) => {
-    if (err) {
-      console.error(err);
-      return res.status(500).json({ error: 'Failed to save data' });
+// ─── API: Save content ──────────────────────────────────────────────
+app.post('/api/content', async (req, res) => {
+  try {
+    const newContent = req.body;
+
+    if (isMongoConnected()) {
+      await Content.findOneAndUpdate(
+        { key: 'main' },
+        { key: 'main', pages: newContent },
+        { upsert: true, new: true }
+      );
+      return res.json({ message: 'Content saved successfully' });
     }
-    res.json({ message: 'Content saved successfully' });
-  });
+
+    // Fallback: write to file
+    fs.writeFile(DATA_FILE, JSON.stringify(newContent, null, 2), 'utf8', (err) => {
+      if (err) {
+        console.error(err);
+        return res.status(500).json({ error: 'Failed to save data' });
+      }
+      res.json({ message: 'Content saved successfully' });
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to save data' });
+  }
 });
 
-// API: Upload QR code
+// ─── API: Upload QR code ────────────────────────────────────────────
 app.post('/api/upload-qr', upload.single('qrcode'), (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
   const url = `/uploads/qrcodes/${req.file.filename}`;
   res.json({ message: 'QR code uploaded', url });
 });
 
-// API: Upload Audio
+// ─── API: Upload Audio ──────────────────────────────────────────────
 app.post('/api/upload-audio', uploadAudio.single('audio'), (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
   const url = `/uploads/audio/${req.file.filename}`;
@@ -89,26 +140,56 @@ app.post('/api/upload-audio', uploadAudio.single('audio'), (req, res) => {
 const HELP_FILE = path.join(__dirname, 'data', 'help.json');
 
 // API: Get help guide steps
-app.get('/api/help', (req, res) => {
-  fs.readFile(HELP_FILE, 'utf8', (err, data) => {
-    if (err) {
-      console.error(err);
-      return res.status(500).json({ error: 'Failed to read help data' });
+app.get('/api/help', async (req, res) => {
+  try {
+    if (isMongoConnected()) {
+      const doc = await Help.findOne({ key: 'main' });
+      if (doc) {
+        return res.json({ mobile: doc.mobile, desktop: doc.desktop });
+      }
+      return res.json({ mobile: [], desktop: [] });
     }
-    res.json(JSON.parse(data));
-  });
+
+    // Fallback: read from file
+    fs.readFile(HELP_FILE, 'utf8', (err, data) => {
+      if (err) {
+        console.error(err);
+        return res.status(500).json({ error: 'Failed to read help data' });
+      }
+      res.json(JSON.parse(data));
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to read help data' });
+  }
 });
 
 // API: Save help guide steps
-app.post('/api/help', (req, res) => {
-  const newHelp = req.body;
-  fs.writeFile(HELP_FILE, JSON.stringify(newHelp, null, 2), 'utf8', (err) => {
-    if (err) {
-      console.error(err);
-      return res.status(500).json({ error: 'Failed to save help data' });
+app.post('/api/help', async (req, res) => {
+  try {
+    const newHelp = req.body;
+
+    if (isMongoConnected()) {
+      await Help.findOneAndUpdate(
+        { key: 'main' },
+        { key: 'main', mobile: newHelp.mobile, desktop: newHelp.desktop },
+        { upsert: true, new: true }
+      );
+      return res.json({ message: 'Help guide saved successfully' });
     }
-    res.json({ message: 'Help guide saved successfully' });
-  });
+
+    // Fallback: write to file
+    fs.writeFile(HELP_FILE, JSON.stringify(newHelp, null, 2), 'utf8', (err) => {
+      if (err) {
+        console.error(err);
+        return res.status(500).json({ error: 'Failed to save help data' });
+      }
+      res.json({ message: 'Help guide saved successfully' });
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to save help data' });
+  }
 });
 
 app.listen(PORT, () => {
