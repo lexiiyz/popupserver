@@ -1,91 +1,62 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
-const mongoose = require('mongoose');
 const fs = require('fs');
 const path = require('path');
 const multer = require('multer');
-
-const Content = require('./models/Content');
-const Help = require('./models/Help');
+const { createClient } = require('@supabase/supabase-js');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const MONGODB_URI = process.env.MONGODB_URI;
-const DATA_FILE = path.join(__dirname, 'data', 'content.json');
 
-// ─── MongoDB Connection ─────────────────────────────────────────────
-if (MONGODB_URI) {
-  mongoose.connect(MONGODB_URI)
-    .then(() => console.log('✅ Connected to MongoDB Atlas'))
-    .catch(err => console.error('❌ MongoDB connection error:', err.message));
+// ─── Supabase Setup ───────────────────────────────────────────────
+const SUPABASE_URL = process.env.SUPABASE_URL;
+const SUPABASE_KEY = process.env.SUPABASE_KEY;
+
+let supabase = null;
+if (SUPABASE_URL && SUPABASE_KEY) {
+  supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+  console.log('✅ Supabase client initialized');
 } else {
-  console.warn('⚠️  MONGODB_URI not set. Falling back to local JSON files.');
+  console.warn('⚠️  Supabase variables not set. Falling back to local files.');
 }
 
-// Helper: check if MongoDB is connected
-function isMongoConnected() {
-  return mongoose.connection.readyState === 1;
-}
+// ─── Local Fallback Paths ─────────────────────────────────────────
+const DATA_FILE = path.join(__dirname, 'data', 'content.json');
+const HELP_FILE = path.join(__dirname, 'data', 'help.json');
 
-// Ensure upload directories exist
-const QR_DIR = path.join(__dirname, 'public', 'qrcodes');
-if (!fs.existsSync(QR_DIR)) fs.mkdirSync(QR_DIR, { recursive: true });
-
-const AUDIO_DIR = path.join(__dirname, 'public', 'audio');
-if (!fs.existsSync(AUDIO_DIR)) fs.mkdirSync(AUDIO_DIR, { recursive: true });
-
-// Multer config for QR code uploads
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, QR_DIR),
-  filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname);
-    const page = req.body.page || 'unknown';
-    const index = req.body.popupIndex !== undefined ? `_i${req.body.popupIndex}` : '';
-    const name = `qr_p${page}${index}_${Date.now()}${ext}`;
-    cb(null, name);
-  }
-});
-const upload = multer({ storage, limits: { fileSize: 5 * 1024 * 1024 } });
-
-// Multer config for Audio uploads
-const storageAudio = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, AUDIO_DIR),
-  filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname);
-    const page = req.body.page || 'unknown';
-    const type = req.body.type || 'bg'; // bg or popup
-    const index = req.body.popupIndex !== undefined ? `_i${req.body.popupIndex}` : '';
-    const name = `audio_${type}_p${page}${index}_${Date.now()}${ext}`;
-    cb(null, name);
-  }
-});
-const uploadAudio = multer({ storage: storageAudio, limits: { fileSize: 50 * 1024 * 1024 } });
+// ─── Multer Setup (Memory Storage for Supabase) ───────────────────
+// We use memoryStorage so the file is kept in RAM buffer and directly 
+// uploaded to Supabase Storage without touching the ephemeral disk.
+const storage = multer.memoryStorage();
+const upload = multer({ storage, limits: { fileSize: 50 * 1024 * 1024 } }); // 50MB max
 
 app.use(cors());
 app.use(express.json());
 
-// Serve uploaded files statically
+// Serve local uploads statically (only needed if falling back to local storage)
 app.use('/uploads', express.static(path.join(__dirname, 'public')));
 
 // ─── API: Get content ───────────────────────────────────────────────
 app.get('/api/content', async (req, res) => {
   try {
-    if (isMongoConnected()) {
-      const doc = await Content.findOne({ key: 'main' });
-      if (doc) {
-        return res.json(doc.pages);
+    if (supabase) {
+      const { data, error } = await supabase
+        .from('app_data')
+        .select('data')
+        .eq('id', 'content')
+        .single();
+      
+      if (error && error.code !== 'PGRST116') { // PGRST116 = no rows found
+        console.error('Supabase error:', error);
+      } else if (data) {
+        return res.json(data.data);
       }
-      // If no data in MongoDB yet, return empty array
-      return res.json([]);
     }
 
     // Fallback: read from file
     fs.readFile(DATA_FILE, 'utf8', (err, data) => {
-      if (err) {
-        console.error(err);
-        return res.status(500).json({ error: 'Failed to read data' });
-      }
+      if (err) return res.status(500).json({ error: 'Failed to read local data' });
       res.json(JSON.parse(data));
     });
   } catch (err) {
@@ -99,22 +70,22 @@ app.post('/api/content', async (req, res) => {
   try {
     const newContent = req.body;
 
-    if (isMongoConnected()) {
-      await Content.findOneAndUpdate(
-        { key: 'main' },
-        { key: 'main', pages: newContent },
-        { upsert: true, new: true }
-      );
-      return res.json({ message: 'Content saved successfully' });
+    if (supabase) {
+      const { error } = await supabase
+        .from('app_data')
+        .upsert({ id: 'content', data: newContent });
+      
+      if (error) {
+        console.error('Supabase error:', error);
+        return res.status(500).json({ error: 'Failed to save to Supabase' });
+      }
+      return res.json({ message: 'Content saved to Supabase successfully' });
     }
 
     // Fallback: write to file
     fs.writeFile(DATA_FILE, JSON.stringify(newContent, null, 2), 'utf8', (err) => {
-      if (err) {
-        console.error(err);
-        return res.status(500).json({ error: 'Failed to save data' });
-      }
-      res.json({ message: 'Content saved successfully' });
+      if (err) return res.status(500).json({ error: 'Failed to save local data' });
+      res.json({ message: 'Content saved locally successfully' });
     });
   } catch (err) {
     console.error(err);
@@ -122,40 +93,28 @@ app.post('/api/content', async (req, res) => {
   }
 });
 
-// ─── API: Upload QR code ────────────────────────────────────────────
-app.post('/api/upload-qr', upload.single('qrcode'), (req, res) => {
-  if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
-  const url = `/uploads/qrcodes/${req.file.filename}`;
-  res.json({ message: 'QR code uploaded', url });
-});
-
-// ─── API: Upload Audio ──────────────────────────────────────────────
-app.post('/api/upload-audio', uploadAudio.single('audio'), (req, res) => {
-  if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
-  const url = `/uploads/audio/${req.file.filename}`;
-  res.json({ message: 'Audio uploaded', url });
-});
-
 // ─── Help Guide API ─────────────────────────────────────────────────
-const HELP_FILE = path.join(__dirname, 'data', 'help.json');
 
 // API: Get help guide steps
 app.get('/api/help', async (req, res) => {
   try {
-    if (isMongoConnected()) {
-      const doc = await Help.findOne({ key: 'main' });
-      if (doc) {
-        return res.json({ mobile: doc.mobile, desktop: doc.desktop });
+    if (supabase) {
+      const { data, error } = await supabase
+        .from('app_data')
+        .select('data')
+        .eq('id', 'help')
+        .single();
+      
+      if (error && error.code !== 'PGRST116') {
+        console.error('Supabase error:', error);
+      } else if (data) {
+        return res.json(data.data);
       }
-      return res.json({ mobile: [], desktop: [] });
     }
 
     // Fallback: read from file
     fs.readFile(HELP_FILE, 'utf8', (err, data) => {
-      if (err) {
-        console.error(err);
-        return res.status(500).json({ error: 'Failed to read help data' });
-      }
+      if (err) return res.status(500).json({ error: 'Failed to read local help data' });
       res.json(JSON.parse(data));
     });
   } catch (err) {
@@ -169,27 +128,75 @@ app.post('/api/help', async (req, res) => {
   try {
     const newHelp = req.body;
 
-    if (isMongoConnected()) {
-      await Help.findOneAndUpdate(
-        { key: 'main' },
-        { key: 'main', mobile: newHelp.mobile, desktop: newHelp.desktop },
-        { upsert: true, new: true }
-      );
-      return res.json({ message: 'Help guide saved successfully' });
+    if (supabase) {
+      const { error } = await supabase
+        .from('app_data')
+        .upsert({ id: 'help', data: newHelp });
+      
+      if (error) {
+        console.error('Supabase error:', error);
+        return res.status(500).json({ error: 'Failed to save help to Supabase' });
+      }
+      return res.json({ message: 'Help guide saved to Supabase successfully' });
     }
 
     // Fallback: write to file
     fs.writeFile(HELP_FILE, JSON.stringify(newHelp, null, 2), 'utf8', (err) => {
-      if (err) {
-        console.error(err);
-        return res.status(500).json({ error: 'Failed to save help data' });
-      }
-      res.json({ message: 'Help guide saved successfully' });
+      if (err) return res.status(500).json({ error: 'Failed to save local help data' });
+      res.json({ message: 'Help guide saved locally successfully' });
     });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Failed to save help data' });
   }
+});
+
+// ─── API: Upload QR code & Audio ────────────────────────────────────
+// Generalized upload handler for Supabase
+async function handleSupabaseUpload(req, res, folderName) {
+  if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
+  
+  if (!supabase) {
+    // We cannot fallback cleanly because we removed diskStorage to save memory.
+    // If you need local uploads, you should keep the old multer setup.
+    return res.status(500).json({ error: 'Supabase not configured for uploads' });
+  }
+
+  try {
+    const file = req.file;
+    const ext = path.extname(file.originalname);
+    const page = req.body.page || 'unknown';
+    const index = req.body.popupIndex !== undefined ? `_i${req.body.popupIndex}` : '';
+    
+    // Create unique filename
+    const fileName = `${folderName}/p${page}${index}_${Date.now()}${ext}`;
+
+    // Upload to Supabase Storage Bucket 'uploads'
+    const { data, error } = await supabase.storage
+      .from('uploads')
+      .upload(fileName, file.buffer, {
+        contentType: file.mimetype,
+        upsert: false
+      });
+
+    if (error) throw error;
+
+    // Get the public URL
+    const { data: urlData } = supabase.storage.from('uploads').getPublicUrl(fileName);
+    
+    res.json({ message: 'File uploaded successfully', url: urlData.publicUrl });
+  } catch (err) {
+    console.error('Upload error:', err);
+    res.status(500).json({ error: 'Failed to upload file to Supabase' });
+  }
+}
+
+app.post('/api/upload-qr', upload.single('qrcode'), (req, res) => {
+  handleSupabaseUpload(req, res, 'qrcodes');
+});
+
+app.post('/api/upload-audio', upload.single('audio'), (req, res) => {
+  handleSupabaseUpload(req, res, 'audio');
 });
 
 app.listen(PORT, () => {
