@@ -70,6 +70,26 @@ app.post('/api/content', async (req, res) => {
   try {
     const newContent = req.body;
 
+    // Auto-update QR Codes before saving
+    if (Array.isArray(newContent)) {
+      newContent.forEach(page => {
+        if (Array.isArray(page.popups)) {
+          page.popups.forEach(popup => {
+            // Auto generate QR code based on the first link if not using an uploaded custom image
+            if (popup.links && popup.links.length > 0) {
+              // Only override if it's an auto-generated one or empty. Leave it alone if it's a custom uploaded Supabase image.
+              if (!popup.qrcode || popup.qrcode.includes('api.qrserver.com')) {
+                popup.qrcode = "https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=" + encodeURIComponent(popup.links[0]);
+              }
+            } else if (popup.qrcode && popup.qrcode.includes('api.qrserver.com')) {
+              // If there's no link anymore but it has an auto QR, clear it
+              popup.qrcode = "";
+            }
+          });
+        }
+      });
+    }
+
     if (supabase) {
       const { error } = await supabase
         .from('app_data')
